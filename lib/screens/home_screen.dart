@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:umbrella/global/theme.dart';
+import 'package:umbrella/global/fade_route.dart';
 import 'package:umbrella/local_store/local_store.dart';
 import 'package:umbrella/global/colors.dart';
 import 'package:umbrella/models/weather_model.dart';
+import 'package:umbrella/screens/detail_screen.dart';
+import 'package:umbrella/screens/search_screen.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -30,6 +32,14 @@ class _HomePageState extends State<HomePage> {
     super.initState();
   }
 
+  _refreshWeather(newLocation) {
+    this.getForecast(newLocation, _language);
+    setState(() {
+      _location = newLocation;
+      _isUpdate = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget _buildAppBar(String name, String country) {
@@ -41,9 +51,15 @@ class _HomePageState extends State<HomePage> {
             children: [
               GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _darkMode = !_darkMode;
-                  });
+                  Navigator.push(
+                    context,
+                    FadeRoute(
+                      page: DetailScreen(
+                        darkMode: _darkMode,
+                        currentLocation: "$name, $country",
+                      ),
+                    ),
+                  );
                 },
                 child: Container(
                   width: 50,
@@ -54,20 +70,8 @@ class _HomePageState extends State<HomePage> {
                       color: _darkMode != true ? cl_background : cd_background,
                       borderRadius: BorderRadius.all(Radius.circular(15)),
                       boxShadow: [
-                        BoxShadow(
-                            color: _darkMode != true
-                                ? cl_darkShadow
-                                : cd_darkShadow,
-                            offset: Offset(4.0, 4.0),
-                            blurRadius: 15.0,
-                            spreadRadius: 1.0),
-                        BoxShadow(
-                            color: _darkMode != true
-                                ? cl_lightShadow
-                                : cd_lightShadow,
-                            offset: Offset(-4.0, -4.0),
-                            blurRadius: 15.0,
-                            spreadRadius: 1.0),
+                        setBoxShadowDark(_darkMode),
+                        setBoxShadowLight(_darkMode),
                       ]),
                   child: Icon(Icons.menu),
                 ),
@@ -83,8 +87,17 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               GestureDetector(
-                onTap: () {
-                  setState(() => _isUpdate = true);
+                onTap: () async {
+                  final newLocation = await Navigator.push(
+                    context,
+                    FadeRoute(
+                      page: SearchScreen(darkMode: _darkMode),
+                    ),
+                  );
+                  print(newLocation);
+                  if (newLocation != null && newLocation != "null") {
+                    _refreshWeather(newLocation);
+                  }
                 },
                 child: Container(
                   width: 50,
@@ -95,20 +108,8 @@ class _HomePageState extends State<HomePage> {
                       color: _darkMode != true ? cl_background : cd_background,
                       borderRadius: BorderRadius.all(Radius.circular(15)),
                       boxShadow: [
-                        BoxShadow(
-                            color: _darkMode != true
-                                ? cl_darkShadow
-                                : cd_darkShadow,
-                            offset: Offset(4.0, 4.0),
-                            blurRadius: 15.0,
-                            spreadRadius: 1.0),
-                        BoxShadow(
-                            color: _darkMode != true
-                                ? cl_lightShadow
-                                : cd_lightShadow,
-                            offset: Offset(-4.0, -4.0),
-                            blurRadius: 15.0,
-                            spreadRadius: 1.0),
+                        setBoxShadowDark(_darkMode),
+                        setBoxShadowLight(_darkMode),
                       ]),
                   child: Icon(Icons.search),
                 ),
@@ -174,16 +175,8 @@ class _HomePageState extends State<HomePage> {
             color: _darkMode != true ? cl_background : cd_background,
             borderRadius: BorderRadius.all(Radius.circular(20)),
             boxShadow: [
-              BoxShadow(
-                  color: _darkMode != true ? cl_darkShadow : cd_darkShadow,
-                  offset: Offset(4.0, 4.0),
-                  blurRadius: 15.0,
-                  spreadRadius: 1.0),
-              BoxShadow(
-                  color: _darkMode != true ? cl_lightShadow : cd_lightShadow,
-                  offset: Offset(-4.0, -4.0),
-                  blurRadius: 15.0,
-                  spreadRadius: 1.0),
+              setBoxShadowDark(_darkMode),
+              setBoxShadowLight(_darkMode),
             ]),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 20, 5, 10),
@@ -237,7 +230,7 @@ class _HomePageState extends State<HomePage> {
               height: 210,
               child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
-                  itemCount: _listForecast.length,
+                  itemCount: 8,
                   scrollDirection: Axis.horizontal,
                   itemBuilder: (context, index) {
                     return _itemForecast(_listForecast[index]);
@@ -246,46 +239,31 @@ class _HomePageState extends State<HomePage> {
           : Center(child: CircularProgressIndicator());
     }
 
-    /*Widget _buildChart() {
-      return Container(
-        height: 280,
-        margin: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-        decoration: BoxDecoration(
-            color: c_background,
-            borderRadius: BorderRadius.all(Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                  color: c_darkShadow,
-                  offset: Offset(4.0, 4.0),
-                  blurRadius: 15.0,
-                  spreadRadius: 1.0),
-              BoxShadow(
-                  color: c_lightShadow,
-                  offset: Offset(-4.0, -4.0),
-                  blurRadius: 15.0,
-                  spreadRadius: 1.0),
-            ]),
-      );
-    }*/
+    return FutureBuilder<WeatherModel>(
+      future: getCurrentWeather(_location, _language),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text("${snapshot.error}"));
+        }
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Umbrella',
-      theme: _darkMode != true ? lightTheme : darkTheme,
-      home: Scaffold(
-        backgroundColor: _darkMode != true ? cl_background : cd_background,
-        body: FutureBuilder<WeatherModel>(
-          future: getCurrentWeather(_location, _language),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(child: Text("${snapshot.error}"));
-            }
+        if (!snapshot.hasData) {
+          return Center(child: CircularProgressIndicator());
+        }
 
-            if (!snapshot.hasData) {
-              return Center(child: CircularProgressIndicator());
-            }
+        var dateNow = DateTime.now();
+        int now = dateNow.millisecondsSinceEpoch;
+        if (now > snapshot.data.sunrise && now < snapshot.data.sunset) {
+          _darkMode = false;
+        } else {
+          _darkMode = true;
+        }
 
-            return Stack(
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: _darkMode != true ? lightTheme : darkTheme,
+          home: Scaffold(
+            backgroundColor: _darkMode != true ? cl_background : cd_background,
+            body: Stack(
               children: [
                 Column(
                   children: [
@@ -306,10 +284,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 _buildAppBar(snapshot.data.name, snapshot.data.country),
               ],
-            );
-          },
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 
