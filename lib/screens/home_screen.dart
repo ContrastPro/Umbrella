@@ -42,7 +42,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget _buildAppBar(String name, String country) {
+    Widget _buildAppBar(String currentLocation, int windDeg, double windSpeed,
+        int feelsLike, int humidity, int pressure) {
       return Container(
         color: _darkMode != true ? cl_background : cd_background,
         child: SafeArea(
@@ -50,16 +51,22 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final darkMode = await Navigator.push(
                     context,
                     FadeRoute(
                       page: DetailScreen(
                         darkMode: _darkMode,
-                        currentLocation: "$name, $country",
+                        currentLocation: currentLocation,
+                        windDeg: windDeg,
+                        windSpeed: windSpeed,
+                        feelsLike: feelsLike,
+                        humidity: humidity,
+                        pressure: pressure,
                       ),
                     ),
                   );
+                  setState(() => _darkMode = darkMode);
                 },
                 child: Container(
                   width: 50,
@@ -78,7 +85,7 @@ class _HomePageState extends State<HomePage> {
               ),
               Expanded(
                 child: Text(
-                  "$name, $country",
+                  currentLocation,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: _darkMode != true ? tl_primary : td_primary,
@@ -95,9 +102,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                   print(newLocation);
-                  if (newLocation != null && newLocation != "null") {
+                  /*if (newLocation != null && newLocation != "null") {
                     _refreshWeather(newLocation);
-                  }
+                  }*/
                 },
                 child: Container(
                   width: 50,
@@ -134,7 +141,6 @@ class _HomePageState extends State<HomePage> {
                 "assets/flare/weather_icons.flr",
                 alignment: Alignment.center,
                 fit: BoxFit.contain,
-                /*animation: "50d",*/
                 animation: "${icon}d",
               ),
             ),
@@ -212,7 +218,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   Image.asset(
-                    "assets/icons/${icon.substring(0, icon.length - 1)}d.png",
+                    "assets/weather/${icon.substring(0, icon.length - 1)}d.png",
                     width: 45,
                     height: 45,
                   ),
@@ -250,14 +256,6 @@ class _HomePageState extends State<HomePage> {
           return Center(child: CircularProgressIndicator());
         }
 
-        var dateNow = DateTime.now();
-        int now = dateNow.millisecondsSinceEpoch;
-        if (now > snapshot.data.sunrise && now < snapshot.data.sunset) {
-          _darkMode = false;
-        } else {
-          _darkMode = true;
-        }
-
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: _darkMode != true ? lightTheme : darkTheme,
@@ -271,19 +269,23 @@ class _HomePageState extends State<HomePage> {
                           SizedBox(height: 100),
                           Expanded(
                             child: _buildCurrentWeather(
-                                snapshot.data.temperature,
-                                snapshot.data.description,
-                                snapshot.data.icon.substring(
-                                    0, snapshot.data.icon.length - 1)),
+                              snapshot.data.temp,
+                              snapshot.data.description,
+                              snapshot.data.icon
+                                  .substring(0, snapshot.data.icon.length - 1),
+                            ),
                           ),
-                          Column(
-                            children: [
-                              _buildForecastList(),
-                            ],
-                          )
+                          _buildForecastList()
                         ],
                       ),
-                      _buildAppBar(snapshot.data.name, snapshot.data.country),
+                      _buildAppBar(
+                        'Чикаго, US',
+                        snapshot.data.windDeg,
+                        snapshot.data.windSpeed,
+                        snapshot.data.feelsLike,
+                        snapshot.data.humidity,
+                        snapshot.data.pressure,
+                      ),
                     ],
                   )
                 : Center(child: CircularProgressIndicator()),
@@ -302,7 +304,7 @@ class _HomePageState extends State<HomePage> {
       var response = await http.get(
           // Encode the url
           Uri.encodeFull(
-              "https://api.openweathermap.org/data/2.5/weather?q=$location&appid=800fa38035fea9e71554e7d7134e0190&units=metric&lang=$language"),
+              "http://api.openweathermap.org/data/2.5/onecall?lat=33.441792&lon=-94.037689&exclude=minutely&appid=800fa38035fea9e71554e7d7134e0190&units=metric&lang=$language"),
           // Only accept JSON response
           headers: {"Accept": "application/json"});
 
@@ -319,10 +321,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> getForecast(String location, String language) async {
-
-
-
-
     String forecast = await readForecast();
 
     if (forecast != "Couldn't read file" && _isUpdate != true) {

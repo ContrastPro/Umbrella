@@ -1,43 +1,43 @@
 class WeatherModel {
-  final String name;
-  final String country;
-  final int temperature;
-  final String description;
-  final String icon;
-  final String speed;
-  final String humidity;
-  final int feelsLike;
-  final String pressure;
+  final int dt;
   final int sunrise;
   final int sunset;
+  final int temp;
+  final int feelsLike;
+  final int pressure;
+  final int humidity;
+  final double windSpeed;
+  final int windDeg;
+  final String description;
+  final String icon;
 
   WeatherModel({
-    this.name,
-    this.country,
-    this.temperature,
-    this.description,
-    this.icon,
-    this.speed,
-    this.humidity,
-    this.feelsLike,
-    this.pressure,
+    this.dt,
     this.sunrise,
     this.sunset,
+    this.temp,
+    this.feelsLike,
+    this.pressure,
+    this.humidity,
+    this.windSpeed,
+    this.windDeg,
+    this.description,
+    this.icon,
   });
 
   factory WeatherModel.fromJson(Map<String, dynamic> json) {
     return WeatherModel(
-      name: json['name'],
-      country: json['sys']['country'],
-      temperature: json['main']['temp'].round(),
-      description: json['weather'][0]['description'],
-      icon: json['weather'][0]['icon'],
-      speed: json['wind']['speed'].toString(),
-      humidity: json['main']['humidity'].toString(),
-      feelsLike: json['main']['feels_like'].round(),
-      pressure: json['main']['pressure'].toString(),
-      sunrise: json['sys']['sunrise'] * 1000,
-      sunset: json['sys']['sunset'] * 1000,
+      dt: json['current']['dt'] * 1000,
+      sunrise: json['current']['sunrise'] * 1000,
+      sunset: json['current']['sunset'] * 1000,
+      temp: json['current']['temp'].round(),
+      feelsLike: json['current']['feels_like'].round(),
+      pressure: json['current']['pressure'],
+      humidity: json['current']['humidity'],
+      windSpeed: json['current']['wind_speed'],
+      windDeg: json['current']['wind_deg'],
+      description: json['current']['weather'][0]['description'],
+      icon: json['current']['weather'][0]['icon'],
     );
   }
 }
