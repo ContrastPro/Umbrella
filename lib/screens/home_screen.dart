@@ -263,28 +263,30 @@ class _HomePageState extends State<HomePage> {
           theme: _darkMode != true ? lightTheme : darkTheme,
           home: Scaffold(
             backgroundColor: _darkMode != true ? cl_background : cd_background,
-            body: Stack(
-              children: [
-                Column(
-                  children: [
-                    SizedBox(height: 100),
-                    Expanded(
-                      child: _buildCurrentWeather(
-                          snapshot.data.temperature,
-                          snapshot.data.description,
-                          snapshot.data.icon
-                              .substring(0, snapshot.data.icon.length - 1)),
-                    ),
-                    Column(
-                      children: [
-                        _buildForecastList(),
-                      ],
-                    )
-                  ],
-                ),
-                _buildAppBar(snapshot.data.name, snapshot.data.country),
-              ],
-            ),
+            body: _isUpdate != true
+                ? Stack(
+                    children: [
+                      Column(
+                        children: [
+                          SizedBox(height: 100),
+                          Expanded(
+                            child: _buildCurrentWeather(
+                                snapshot.data.temperature,
+                                snapshot.data.description,
+                                snapshot.data.icon.substring(
+                                    0, snapshot.data.icon.length - 1)),
+                          ),
+                          Column(
+                            children: [
+                              _buildForecastList(),
+                            ],
+                          )
+                        ],
+                      ),
+                      _buildAppBar(snapshot.data.name, snapshot.data.country),
+                    ],
+                  )
+                : Center(child: CircularProgressIndicator()),
           ),
         );
       },
@@ -317,6 +319,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> getForecast(String location, String language) async {
+
+
+
+
     String forecast = await readForecast();
 
     if (forecast != "Couldn't read file" && _isUpdate != true) {

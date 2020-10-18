@@ -30,6 +30,7 @@ dependencies:
   cupertino_icons: ^0.1.3
   path_provider: ^1.6.21
   flare_flutter: ^2.0.6
+  bezier_chart: ^1.0.17+1
   intl: ^0.16.1
   http: ^0.12.2
 

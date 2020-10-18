@@ -1,5 +1,9 @@
+import 'dart:convert';
+
+import 'package:bezier_chart/bezier_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:umbrella/global/colors.dart';
+import 'package:umbrella/local_store/local_store.dart';
 
 class DetailScreen extends StatefulWidget {
   final bool darkMode;
@@ -13,6 +17,29 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen> {
+  List _listForecast;
+
+  @override
+  void initState() {
+    this._getForecast();
+    super.initState();
+  }
+
+  _getForecast() async {
+    String forecast = await readForecast();
+    setState(() => _listForecast = json.decode(forecast)['list']);
+  }
+
+  DateTime _parseTime(listForecast){
+    return DateTime.fromMillisecondsSinceEpoch(listForecast['dt'] * 1000);
+  }
+
+  double _parseTemperature(listForecast){
+    return listForecast['main']['temp'];
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     Widget _buildAppBar() {
@@ -72,6 +99,35 @@ class _DetailScreenState extends State<DetailScreen> {
               setBoxShadowDark(widget.darkMode),
               setBoxShadowLight(widget.darkMode),
             ]),
+        child: Center(
+          child: BezierChart(
+            bezierChartScale: BezierChartScale.HOURLY,
+            fromDate: DateTime.now(),
+            toDate: DateTime.now().add(Duration(hours: 24)),
+            selectedDate: DateTime.now(),
+            series: [
+              BezierLine(
+                lineColor: widget.darkMode != true ? cd_background : cl_background,
+                data: [
+                  DataPoint<DateTime>(value: _parseTemperature(_listForecast[0]), xAxis: _parseTime(_listForecast[0])),
+                  DataPoint<DateTime>(value: _parseTemperature(_listForecast[1]), xAxis: _parseTime(_listForecast[1])),
+                  DataPoint<DateTime>(value: _parseTemperature(_listForecast[2]), xAxis: _parseTime(_listForecast[2])),
+                  DataPoint<DateTime>(value: _parseTemperature(_listForecast[3]), xAxis: _parseTime(_listForecast[3])),
+                  DataPoint<DateTime>(value: _parseTemperature(_listForecast[4]), xAxis: _parseTime(_listForecast[4])),
+                  DataPoint<DateTime>(value: _parseTemperature(_listForecast[5]), xAxis: _parseTime(_listForecast[5])),
+                  DataPoint<DateTime>(value: _parseTemperature(_listForecast[6]), xAxis: _parseTime(_listForecast[6])),
+                  DataPoint<DateTime>(value: _parseTemperature(_listForecast[7]), xAxis: _parseTime(_listForecast[7])),
+                ],
+              ),
+            ],
+            config: BezierChartConfig(
+              verticalIndicatorStrokeWidth: 3.0,
+              showVerticalIndicator: false,
+              verticalIndicatorFixedPosition: false,
+              snap: false,
+            ),
+          ),
+        ),
       );
     }
 
@@ -86,7 +142,9 @@ class _DetailScreenState extends State<DetailScreen> {
             Column(
               children: [
                 SizedBox(height: 120),
-                _buildChart(),
+                _listForecast != null
+                    ? _buildChart()
+                    : Center(child: CircularProgressIndicator()),
               ],
             ),
             _buildAppBar(),
