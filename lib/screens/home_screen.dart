@@ -21,8 +21,8 @@ class _HomePageState extends State<HomePage> {
   bool _darkMode;
   List _listHourly;
   List _listDaily;
-  double _lon = 139.69;
-  double _lat = 35.69;
+  double _lon = -0.13;
+  double _lat = 51.51;
   String _name;
 
   @override
@@ -240,8 +240,8 @@ class _HomePageState extends State<HomePage> {
     if (city != "Couldn't read file") {
       setState(() => _name = city);
     } else {
-      setState(() => _name = "Лондон");
-      saveCity("Лондон");
+      setState(() => _name = "Лондон, GB");
+      saveCity("Лондон, GB");
     }
   }
 
