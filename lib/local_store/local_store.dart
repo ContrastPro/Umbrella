@@ -21,22 +21,42 @@ saveCurrentWeather(String currentWeather) async {
   print('Saved current weather\n$currentWeather');
 }
 
-Future<String> readForecast() async {
+Future<String> readTheme() async {
   try {
     final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/forecast.txt');
-    String currentWeather = await file.readAsString();
-    print("Read forecast from file \n$currentWeather");
-    return currentWeather;
+    final file = File('${directory.path}/theme.txt');
+    String currentTheme = await file.readAsString();
+    print("Set theme \"$currentTheme\". Read theme from file");
+    return currentTheme;
   } catch (e) {
-    print("Couldn't read forecast from file");
+    print("Couldn't read theme from file");
     return "Couldn't read file";
   }
 }
 
-saveForecast(String currentWeather) async {
+saveTheme(String currentTheme) async {
   final directory = await getApplicationDocumentsDirectory();
-  final file = File('${directory.path}/forecast.txt');
-  await file.writeAsString(currentWeather);
-  print('Saved forecast\n$currentWeather');
+  final file = File('${directory.path}/theme.txt');
+  await file.writeAsString(currentTheme);
+  print('Saved theme \"$currentTheme\".');
+}
+
+Future<String> readCity() async {
+  try {
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/city.txt');
+    String currentCity = await file.readAsString();
+    print("Current city is: \"$currentCity\". Read theme from file");
+    return currentCity;
+  } catch (e) {
+    print("Couldn't read city from file");
+    return "Couldn't read file";
+  }
+}
+
+saveCity(String currentCity) async {
+  final directory = await getApplicationDocumentsDirectory();
+  final file = File('${directory.path}/city.txt');
+  await file.writeAsString(currentCity);
+  print('Saved city: \"$currentCity\".');
 }

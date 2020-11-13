@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:flare_flutter/flare_actor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:umbrella/global/fade_route.dart';
 import 'package:umbrella/local_store/local_store.dart';
 import 'package:umbrella/global/colors.dart';
@@ -17,33 +17,27 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List _listForecast;
-  String _location = "Одесса";
-  String _language = "ru";
   bool _isUpdate = false;
-  bool _darkMode = false;
+  bool _darkMode;
+  List _listHourly;
+  List _listDaily;
+  double _lon = 139.69;
+  double _lat = 35.69;
+  String _name;
 
   @override
   void initState() {
-    this.getForecast(_location, _language);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setSystemUIOverlayStyle(
         SystemUiOverlayStyle(statusBarColor: Colors.transparent));
+    this._setTheme();
+    this._setCity();
     super.initState();
-  }
-
-  _refreshWeather(newLocation) {
-    this.getForecast(newLocation, _language);
-    setState(() {
-      _location = newLocation;
-      _isUpdate = true;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    Widget _buildAppBar(String currentLocation, int windDeg, double windSpeed,
-        int feelsLike, int humidity, int pressure) {
+    Widget _buildAppBar() {
       return Container(
         color: _darkMode != true ? cl_background : cd_background,
         child: SafeArea(
@@ -52,21 +46,15 @@ class _HomePageState extends State<HomePage> {
             children: [
               GestureDetector(
                 onTap: () async {
-                  final darkMode = await Navigator.push(
+                  await Navigator.push(
                     context,
                     FadeRoute(
-                      page: DetailScreen(
-                        darkMode: _darkMode,
-                        currentLocation: currentLocation,
-                        windDeg: windDeg,
-                        windSpeed: windSpeed,
-                        feelsLike: feelsLike,
-                        humidity: humidity,
-                        pressure: pressure,
-                      ),
+                      page: SearchScreen(darkMode: _darkMode),
                     ),
                   );
-                  setState(() => _darkMode = darkMode);
+                  _getForecast();
+                  _setCity();
+                  _setTheme();
                 },
                 child: Container(
                   width: 50,
@@ -74,18 +62,19 @@ class _HomePageState extends State<HomePage> {
                   margin:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                   decoration: BoxDecoration(
-                      color: _darkMode != true ? cl_background : cd_background,
-                      borderRadius: BorderRadius.all(Radius.circular(15)),
-                      boxShadow: [
-                        setBoxShadowDark(_darkMode),
-                        setBoxShadowLight(_darkMode),
-                      ]),
+                    color: _darkMode != true ? cl_background : cd_background,
+                    borderRadius: BorderRadius.all(Radius.circular(15)),
+                    boxShadow: [
+                      setBoxShadowDark(_darkMode),
+                      setBoxShadowLight(_darkMode),
+                    ],
+                  ),
                   child: Icon(Icons.menu),
                 ),
               ),
               Expanded(
                 child: Text(
-                  currentLocation,
+                  _name,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: _darkMode != true ? tl_primary : td_primary,
@@ -93,34 +82,7 @@ class _HomePageState extends State<HomePage> {
                       fontWeight: FontWeight.w300),
                 ),
               ),
-              GestureDetector(
-                onTap: () async {
-                  final newLocation = await Navigator.push(
-                    context,
-                    FadeRoute(
-                      page: SearchScreen(darkMode: _darkMode),
-                    ),
-                  );
-                  print(newLocation);
-                  /*if (newLocation != null && newLocation != "null") {
-                    _refreshWeather(newLocation);
-                  }*/
-                },
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                  decoration: BoxDecoration(
-                      color: _darkMode != true ? cl_background : cd_background,
-                      borderRadius: BorderRadius.all(Radius.circular(15)),
-                      boxShadow: [
-                        setBoxShadowDark(_darkMode),
-                        setBoxShadowLight(_darkMode),
-                      ]),
-                  child: Icon(Icons.search),
-                ),
-              ),
+              SizedBox(width: 82, height: 82),
             ],
           ),
         ),
@@ -128,15 +90,15 @@ class _HomePageState extends State<HomePage> {
     }
 
     Widget _buildCurrentWeather(
-        int temperature, String description, String icon) {
+        double temperature, String description, String icon) {
       return Stack(
         alignment: Alignment.center,
         children: [
           Align(
             alignment: Alignment.topCenter,
             child: Container(
-              width: 280,
-              height: 280,
+              width: 250,
+              height: 250,
               child: FlareActor(
                 "assets/flare/weather_icons.flr",
                 alignment: Alignment.center,
@@ -149,7 +111,7 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                "$temperature°",
+                "${temperature.round()}°",
                 style: TextStyle(
                     color: _darkMode != true ? tl_primary : td_primary,
                     fontSize: 80,
@@ -162,98 +124,27 @@ class _HomePageState extends State<HomePage> {
                     fontSize: 18,
                     fontWeight: FontWeight.w300),
               ),
-              SizedBox(height: 20)
+              SizedBox(height: 40)
             ],
           ),
         ],
       );
     }
 
-    Widget _itemForecast(dynamic item) {
-      DateFormat dateFormat = DateFormat('HH:mm');
-      int _temperature = item['main']['temp'].round();
-      String icon = item['weather'][0]['icon'];
-
-      return Container(
-        width: 135,
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-        decoration: BoxDecoration(
-            color: _darkMode != true ? cl_background : cd_background,
-            borderRadius: BorderRadius.all(Radius.circular(20)),
-            boxShadow: [
-              setBoxShadowDark(_darkMode),
-              setBoxShadowLight(_darkMode),
-            ]),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 20, 5, 10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                dateFormat.format(
-                  DateTime.fromMillisecondsSinceEpoch(item['dt'] * 1000),
-                ),
-                style: TextStyle(
-                    color: _darkMode != true ? tl_primary : td_primary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w300),
-              ),
-              Text(
-                "$_temperature°",
-                style: TextStyle(
-                    color: _darkMode != true ? tl_primary : td_primary,
-                    fontSize: 35,
-                    fontWeight: FontWeight.w400),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item['weather'][0]['description'],
-                      style: TextStyle(
-                          color: _darkMode != true ? tl_primary : td_primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w300),
-                    ),
-                  ),
-                  Image.asset(
-                    "assets/weather/${icon.substring(0, icon.length - 1)}d.png",
-                    width: 45,
-                    height: 45,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    Widget _buildForecastList() {
-      return _listForecast != null
-          ? Container(
-              height: 210,
-              child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  itemCount: 8,
-                  scrollDirection: Axis.horizontal,
-                  itemBuilder: (context, index) {
-                    return _itemForecast(_listForecast[index]);
-                  }),
-            )
-          : Center(child: CircularProgressIndicator());
-    }
-
     return FutureBuilder<WeatherModel>(
-      future: getCurrentWeather(_location, _language),
+      future: _getCurrentWeather(_lat, _lon),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(child: Text("${snapshot.error}"));
         }
 
         if (!snapshot.hasData) {
-          return Center(child: CircularProgressIndicator());
+          return Center(
+            child: SpinKitDoubleBounce(
+              color: _darkMode != true ? cd_background : cl_background,
+              size: 50.0,
+            ),
+          );
         }
 
         return MaterialApp(
@@ -262,87 +153,123 @@ class _HomePageState extends State<HomePage> {
           home: Scaffold(
             backgroundColor: _darkMode != true ? cl_background : cd_background,
             body: _isUpdate != true
-                ? Stack(
-                    children: [
-                      Column(
-                        children: [
-                          SizedBox(height: 100),
-                          Expanded(
-                            child: _buildCurrentWeather(
-                              snapshot.data.temp,
-                              snapshot.data.description,
-                              snapshot.data.icon
-                                  .substring(0, snapshot.data.icon.length - 1),
-                            ),
+                ? CustomScrollView(
+                    slivers: <Widget>[
+                      SliverAppBar(
+                        backgroundColor:
+                            _darkMode != true ? cl_background : cd_background,
+                        expandedHeight:
+                            MediaQuery.of(context).size.height * 0.75,
+                        floating: false,
+                        pinned: false,
+                        flexibleSpace: FlexibleSpaceBar(
+                          background: Stack(
+                            children: [
+                              Column(
+                                children: [
+                                  SizedBox(height: 100),
+                                  Expanded(
+                                    child: _buildCurrentWeather(
+                                      snapshot.data.temp,
+                                      snapshot.data.description,
+                                      snapshot.data.icon.substring(
+                                          0, snapshot.data.icon.length - 1),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              _buildAppBar(),
+                            ],
                           ),
-                          _buildForecastList()
-                        ],
+                        ),
                       ),
-                      _buildAppBar(
-                        'Чикаго, US',
-                        snapshot.data.windDeg,
-                        snapshot.data.windSpeed,
-                        snapshot.data.feelsLike,
-                        snapshot.data.humidity,
-                        snapshot.data.pressure,
-                      ),
+                      SliverList(
+                        delegate: SliverChildListDelegate(
+                          <Widget>[
+                            DetailScreen(
+                              darkMode: _darkMode,
+                              windDeg: snapshot.data.windDeg,
+                              windSpeed: snapshot.data.windSpeed,
+                              feelsLike: snapshot.data.feelsLike,
+                              humidity: snapshot.data.humidity,
+                              pressure: snapshot.data.pressure,
+                              listHourly: _listHourly,
+                              listDaily: _listDaily,
+                            ),
+                          ],
+                        ),
+                      )
                     ],
                   )
-                : Center(child: CircularProgressIndicator()),
+                : Center(
+                    child: SpinKitDoubleBounce(
+                      color: _darkMode != true ? cd_background : cl_background,
+                      size: 50.0,
+                    ),
+                  ),
           ),
         );
       },
     );
   }
 
-  Future<WeatherModel> getCurrentWeather(
-      String location, String language) async {
+  _setTheme() async {
+    String theme = await readTheme();
+    if (theme != "Couldn't read file") {
+      if (theme == "dark") {
+        setState(() => _darkMode = true);
+      } else {
+        setState(() => _darkMode = false);
+      }
+    } else {
+      setState(() => _darkMode = false);
+      saveTheme("light");
+    }
+  }
+
+  _getForecast() async {
+    String forecast = await readCurrentWeather();
+    setState(() {
+      _listHourly = json.decode(forecast)['hourly'];
+      _listDaily = json.decode(forecast)['daily'];
+    });
+  }
+
+  _setCity() async {
+    String city = await readCity();
+    if (city != "Couldn't read file") {
+      setState(() => _name = city);
+    } else {
+      setState(() => _name = "Лондон");
+      saveCity("Лондон");
+    }
+  }
+
+  Future<WeatherModel> _getCurrentWeather(double lat, double lon) async {
     String currentWeather = await readCurrentWeather();
     if (currentWeather != "Couldn't read file" && _isUpdate != true) {
+      _getForecast();
       return WeatherModel.fromJson(json.decode(currentWeather));
     } else {
       var response = await http.get(
           // Encode the url
           Uri.encodeFull(
-              "http://api.openweathermap.org/data/2.5/onecall?lat=33.441792&lon=-94.037689&exclude=minutely&appid=800fa38035fea9e71554e7d7134e0190&units=metric&lang=$language"),
+              "http://api.openweathermap.org/data/2.5/onecall?lat=$lat&lon=$lon&exclude=minutely&appid=800fa38035fea9e71554e7d7134e0190&units=metric&lang=ru"),
           // Only accept JSON response
           headers: {"Accept": "application/json"});
 
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response, then parse the JSON.
         saveCurrentWeather(response.body);
-        setState(() => _isUpdate = false);
+        setState(() {
+          _listHourly = json.decode(response.body)['hourly'];
+          _listDaily = json.decode(response.body)['daily'];
+          _isUpdate = false;
+        });
         return WeatherModel.fromJson(json.decode(response.body));
       } else {
         // If the server did not return a 200 OK response, then throw an exception.
         throw Exception('Failed to load Current Weather');
-      }
-    }
-  }
-
-  Future<void> getForecast(String location, String language) async {
-    String forecast = await readForecast();
-
-    if (forecast != "Couldn't read file" && _isUpdate != true) {
-      setState(() => _listForecast = json.decode(forecast)['list']);
-    } else {
-      var response = await http.get(
-          // Encode the url
-          Uri.encodeFull(
-              "https://api.openweathermap.org/data/2.5/forecast?q=$location&appid=800fa38035fea9e71554e7d7134e0190&units=metric&lang=$language"),
-          // Only accept JSON response
-          headers: {"Accept": "application/json"});
-
-      if (response.statusCode == 200) {
-        // If the server did return a 200 OK response, then parse the JSON.
-        saveForecast(response.body);
-        setState(() {
-          _listForecast = json.decode(response.body)['list'];
-          _isUpdate = false;
-        });
-      } else {
-        // If the server did not return a 200 OK response, then throw an exception.
-        throw Exception('Failed to load Current Forecast');
       }
     }
   }

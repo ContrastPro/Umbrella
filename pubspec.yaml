@@ -31,6 +31,7 @@ dependencies:
   path_provider: ^1.6.21
   flare_flutter: ^2.0.6
   bezier_chart: ^1.0.17+1
+  flutter_spinkit: ^4.1.2
   intl: ^0.16.1
   http: ^0.12.2
 
@@ -41,7 +42,8 @@ dev_dependencies:
   #flutter pub run flutter_launcher_icons:main
 
 flutter_icons:
-  image_path: 'assets/ico.png'
+  image_path_android: 'assets/ico_android.png'
+  image_path_ios: 'assets/ico_ios.png'
   android: true
   ios: true
 
