@@ -3,10 +3,10 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:umbrella/global/colors.dart';
+import 'package:umbrella/global/popular_cities.dart';
 import 'package:umbrella/local_store/db_last_search.dart';
 import 'package:umbrella/local_store/local_store.dart';
 import 'package:umbrella/models/last_search_model.dart';
-import 'file:///D:/AndrioidStudio/pDart/umbrella/lib/global/popular_cities.dart';
 import 'package:umbrella/models/weather_model.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -408,6 +408,32 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Future<void> _showErrorDialog() async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Ничего не найдено'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Похоже название введено не корректно.'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            FlatButton(
+              child: Text('ОК'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   _close() => Navigator.pop(context);
 
   _checkEmpty() async {
@@ -459,9 +485,8 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     } else {
       // If the server did not return a 200 OK response, then throw an exception.
-      setState(() {
-        _isUpdate = false;
-      });
+      setState(() => _isUpdate = false);
+      _showErrorDialog();
     }
   }
 
